@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use App\Models\Product;
 use App\Models\Hold;
 
@@ -40,6 +41,9 @@ class HoldController extends Controller
                 'expires_at' => now()->addMinutes(15), // Hold valid for 15 minutes
                 'is_used' => false,
             ]);
+
+            // Invalidate cache
+            Cache::forget("product_{$product->id}_stock");
 
             return response()->json($hold, 201);
         });

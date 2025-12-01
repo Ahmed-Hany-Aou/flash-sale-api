@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Cache;
 
 use App\Models\Hold;
 
@@ -24,9 +25,21 @@ class ReleaseExpiredHolds implements ShouldQueue
      */
     public function handle(): void
     {
-        // Delete holds that are expired and not used
-        Hold::where('expires_at', '<', now())
+        // Find expired holds to get product IDs for cache invalidation
+        $expiredHolds = Hold::where('expires_at', '<', now())
             ->where('is_used', false)
-            ->delete();
+            ->get();
+
+        if ($expiredHolds->isEmpty()) {
+            return;
+        }
+
+        // Delete holds
+        Hold::whereIn('id', $expiredHolds->pluck('id'))->delete();
+
+        // Invalidate cache for affected products
+        foreach ($expiredHolds->unique('product_id') as $hold) {
+            Cache::forget("product_{$hold->product_id}_stock");
+        }
     }
 }
