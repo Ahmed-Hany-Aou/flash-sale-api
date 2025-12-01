@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use App\Models\Hold;
 use App\Models\Order;
 use App\Models\Product;
@@ -44,6 +45,9 @@ class OrderController extends Controller
             // Decrement product stock
             $product = Product::where('id', $hold->product_id)->lockForUpdate()->first();
             $product->decrement('total_stock', $hold->quantity);
+
+            // Invalidate cache
+            Cache::forget("product_{$product->id}_stock");
 
             return response()->json($order, 201);
         });
